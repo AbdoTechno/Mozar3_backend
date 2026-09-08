@@ -24,7 +24,7 @@ router = APIRouter(prefix="/api", tags=["Al-Mozare3 Agricultural RAG"])
     summary="Ask an agricultural question with personalized farmer context",
     description="Processes farmer queries using ChromaDB retrieval and Gemini-1.5-flash with Egyptian expert guidelines.",
 )
-async def chat_endpoint(request: ChatRequest) -> ChatResponse:
+def chat_endpoint(request: ChatRequest) -> ChatResponse:
     """Chat endpoint supporting farmer persona and document citations."""
     try:
         response = process_farmer_chat(request)

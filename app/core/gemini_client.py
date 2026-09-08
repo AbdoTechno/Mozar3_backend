@@ -110,7 +110,7 @@ def generate_answer(
     system_instruction: Optional[str] = None,
     temperature: float = 0.2,
 ) -> str:
-    """Generate agricultural answer using Gemini LLM.
+    """Generate agricultural answer using Gemini LLM with automatic multi-model failover.
 
     Args:
         prompt: Assembled context & query prompt.
@@ -125,21 +125,51 @@ def generate_answer(
             "Gemini API key is not configured. Please set GEMINI_API_KEY in your .env file."
         )
 
-    try:
-        model = genai.GenerativeModel(
-            model_name=settings.CHAT_MODEL,
-            system_instruction=system_instruction,
-            generation_config=genai.types.GenerationConfig(
-                temperature=temperature,
-                top_p=0.8,
-                max_output_tokens=2048,
-            ),
-        )
+    # Primary model followed by fallback models in case of 429 quota limits
+    candidate_models = [settings.CHAT_MODEL]
+    fallback_pool = [
+        "models/gemini-3.5-flash",
+        "models/gemini-flash-latest",
+        "models/gemini-3.5-flash-lite",
+    ]
+    for m in fallback_pool:
+        if m not in candidate_models:
+            candidate_models.append(m)
 
-        response = model.generate_content(prompt)
-        if response and response.text:
-            return response.text.strip()
-        return "عذراً، لم أتمكن من تكوين إجابة كاملة من المصادر المتوفرة حالياً."
-    except Exception as e:
-        logger.error(f"Error during Gemini generation: {e}")
-        raise e
+    last_error: Optional[Exception] = None
+
+    for model_name in candidate_models:
+        try:
+            logger.info(f"Attempting answer generation with model: {model_name}")
+            model = genai.GenerativeModel(
+                model_name=model_name,
+                system_instruction=system_instruction,
+                generation_config=genai.types.GenerationConfig(
+                    temperature=temperature,
+                    top_p=0.8,
+                    max_output_tokens=8192,
+                ),
+            )
+
+
+            response = model.generate_content(prompt)
+            if response and response.text:
+                return response.text.strip()
+
+        except Exception as exc:
+            err_str = str(exc)
+            last_error = exc
+            is_quota = "429" in err_str or "quota" in err_str.lower() or "limit" in err_str.lower()
+            logger.warning(
+                f"Model {model_name} failed ({'Quota 429' if is_quota else 'Error'}): {exc}. "
+                f"Trying next fallback model if available..."
+            )
+            # Try next model in candidate_models loop
+
+    logger.error(f"All candidate Gemini models failed: {last_error}")
+    return (
+        "أهلاً بك يا فندم. نعتذر، يبدو أن خدمة الذكاء الاصطناعي بلغت الحد الأقصى المؤقت من الاستفسارات اليومية المجانية (Gemini API Quota).\n\n"
+        "ننصحك بمراجعة المرشد الزراعي في الجمعية الزراعية التابعة لقريتك لمساعدتك فوراً في فحص الحقل، "
+        "أو إعادة المحاولة بعد دقائق."
+    )
+
