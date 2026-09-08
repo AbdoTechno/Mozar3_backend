@@ -1,0 +1,70 @@
+{
+  "name": "Al-Mozare3 RAG Backend Test Collection",
+  "base_url": "http://127.0.0.1:8000",
+  "requests": [
+    {
+      "name": "Health Check",
+      "method": "GET",
+      "endpoint": "/health"
+    },
+    {
+      "name": "System Status",
+      "method": "GET",
+      "endpoint": "/api/status"
+    },
+    {
+      "name": "Chat - Sugar Beet Query (بنجر السكر)",
+      "method": "POST",
+      "endpoint": "/api/chat",
+      "body": {
+        "query": "ما هي أهم معاملات الري ومكافحة الحشائش في محصول بنجر السكر؟",
+        "farmer_context": {
+          "farmer_name": "الحاج أحمد",
+          "crop": "بنجر السكر",
+          "soil_type": "طينية",
+          "irrigation_system": "ري بالغمر",
+          "governorate": "كفر الشيخ",
+          "crop_age_days": 35
+        },
+        "history": []
+      }
+    },
+    {
+      "name": "Chat - Wheat Fertilizer Query (تسميد القمح)",
+      "method": "POST",
+      "endpoint": "/api/chat",
+      "body": {
+        "query": "ما هي كمية السماد المطلوبة لري المحاياة في القمح؟",
+        "farmer_context": {
+          "farmer_name": "عبدالرحمن",
+          "crop": "قمح",
+          "soil_type": "طينية",
+          "irrigation_system": "ري بالغمر",
+          "governorate": "الدقهلية",
+          "crop_age_days": 25
+        },
+        "history": []
+      }
+    },
+    {
+      "name": "Chat - Out of Scope Fallback Test",
+      "method": "POST",
+      "endpoint": "/api/chat",
+      "body": {
+        "query": "كيف أزرع أشجار البن في القطب المتجمد الشمالي؟",
+        "farmer_context": {
+          "farmer_name": "سعيد",
+          "crop": "بن"
+        }
+      }
+    },
+    {
+      "name": "Ingest Documents (Manual Trigger)",
+      "method": "POST",
+      "endpoint": "/api/ingest",
+      "body": {
+        "force_reindex": false
+      }
+    }
+  ]
+}
